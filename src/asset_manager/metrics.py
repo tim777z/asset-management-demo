@@ -1,25 +1,24 @@
 import math
-from typing import List
 
 
-def mean(returns: List[float]) -> float:
+def mean(returns: list[float]) -> float:
     if not returns:
         return 0.0
     return sum(returns) / len(returns)
 
 
-def variance(returns: List[float]) -> float:
+def variance(returns: list[float]) -> float:
     if len(returns) < 2:
         return 0.0
     m = mean(returns)
     return sum((r - m) ** 2 for r in returns) / (len(returns) - 1)
 
 
-def std_dev(returns: List[float]) -> float:
+def std_dev(returns: list[float]) -> float:
     return math.sqrt(variance(returns))
 
 
-def sharpe_ratio(returns: List[float], risk_free_rate: float = 0.05) -> float:
+def sharpe_ratio(returns: list[float], risk_free_rate: float = 0.05) -> float:
     if not returns:
         return 0.0
     excess = mean(returns) - risk_free_rate / 252
@@ -29,14 +28,14 @@ def sharpe_ratio(returns: List[float], risk_free_rate: float = 0.05) -> float:
     return (excess / sd) * math.sqrt(252)
 
 
-def max_drawdown(returns: List[float]) -> float:
+def max_drawdown(returns: list[float]) -> float:
     if not returns:
         return 0.0
     cumulative = 1.0
     peak = 1.0
     max_dd = 0.0
     for r in returns:
-        cumulative *= (1 + r)
+        cumulative *= 1 + r
         if cumulative > peak:
             peak = cumulative
         dd = (peak - cumulative) / peak
@@ -45,7 +44,7 @@ def max_drawdown(returns: List[float]) -> float:
     return max_dd
 
 
-def value_at_risk(returns: List[float], confidence: float = 0.95) -> float:
+def value_at_risk(returns: list[float], confidence: float = 0.95) -> float:
     if not returns:
         return 0.0
     sorted_returns = sorted(returns)
@@ -54,11 +53,11 @@ def value_at_risk(returns: List[float], confidence: float = 0.95) -> float:
     return -sorted_returns[index]
 
 
-def volatility(returns: List[float]) -> float:
+def volatility(returns: list[float]) -> float:
     return std_dev(returns) * math.sqrt(252)
 
 
-def beta(asset_returns: List[float], market_returns: List[float]) -> float:
+def beta(asset_returns: list[float], market_returns: list[float]) -> float:
     if len(asset_returns) != len(market_returns) or len(asset_returns) < 2:
         return 0.0
     cov = sum(
@@ -71,7 +70,11 @@ def beta(asset_returns: List[float], market_returns: List[float]) -> float:
     return cov / market_var
 
 
-def alpha(asset_returns: List[float], market_returns: List[float], risk_free_rate: float = 0.05) -> float:
+def alpha(
+    asset_returns: list[float],
+    market_returns: list[float],
+    risk_free_rate: float = 0.05,
+) -> float:
     if len(asset_returns) != len(market_returns) or len(asset_returns) < 2:
         return 0.0
     b = beta(asset_returns, market_returns)
@@ -80,7 +83,7 @@ def alpha(asset_returns: List[float], market_returns: List[float], risk_free_rat
     return asset_annual - (risk_free_rate + b * (market_annual - risk_free_rate))
 
 
-def information_ratio(asset_returns: List[float], benchmark_returns: List[float]) -> float:
+def information_ratio(asset_returns: list[float], benchmark_returns: list[float]) -> float:
     if len(asset_returns) != len(benchmark_returns) or len(asset_returns) < 2:
         return 0.0
     active = [a - b for a, b in zip(asset_returns, benchmark_returns)]
@@ -90,7 +93,7 @@ def information_ratio(asset_returns: List[float], benchmark_returns: List[float]
     return mean(active) / tracking_error * math.sqrt(252)
 
 
-def sortino_ratio(returns: List[float], risk_free_rate: float = 0.05) -> float:
+def sortino_ratio(returns: list[float], risk_free_rate: float = 0.05) -> float:
     if not returns:
         return 0.0
     excess = mean(returns) - risk_free_rate / 252
