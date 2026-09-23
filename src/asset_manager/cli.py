@@ -1,12 +1,11 @@
 import argparse
 import sys
-from datetime import datetime
 
-from .portfolio import Portfolio
 from .asset import Asset
+from .portfolio import Portfolio, PortfolioLoadError
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Asset Management Toolkit")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -30,17 +29,27 @@ def main():
         p = Portfolio(name=args.name)
         print(f"Created portfolio: {args.name}")
     elif args.command == "add":
-        p = Portfolio.from_csv(args.portfolio)
-        p.add_asset(Asset(
-            symbol=args.symbol,
-            shares=args.shares,
-            avg_cost=args.cost,
-            current_price=args.price,
-            asset_class=args.asset_class,
-        ))
+        try:
+            p = Portfolio.from_csv(args.portfolio)
+        except PortfolioLoadError as e:
+            print(f"Error loading portfolio: {e}", file=sys.stderr)
+            sys.exit(1)
+        p.add_asset(
+            Asset(
+                symbol=args.symbol,
+                shares=args.shares,
+                avg_cost=args.cost,
+                current_price=args.price,
+                asset_class=args.asset_class,
+            )
+        )
         print(f"Added {args.symbol} to {p.name}")
     elif args.command == "report":
-        p = Portfolio.from_csv(args.portfolio)
+        try:
+            p = Portfolio.from_csv(args.portfolio)
+        except PortfolioLoadError as e:
+            print(f"Error loading portfolio: {e}", file=sys.stderr)
+            sys.exit(1)
         print(p.generate_report())
     else:
         parser.print_help()

@@ -12,9 +12,24 @@ A Python-based portfolio analytics toolkit for tracking assets, calculating risk
 
 ## Installation
 
+### Standard Installation
+
 ```bash
 pip install -e ".[dev]"
 ```
+
+### Reproducible Installation (Recommended for Production)
+
+For exact dependency reproduction, use the committed lockfile:
+
+```bash
+pip install -r requirements-dev.lock.txt
+pip install -e . --no-deps
+```
+
+This ensures all dependencies are pinned to specific versions, guaranteeing identical environments across development, CI, and production.
+
+## Usage
 
 ## Usage
 
@@ -31,6 +46,52 @@ print(f"Total Value: ${portfolio.total_value():,.2f}")
 print(f"Sharpe Ratio: {portfolio.sharpe_ratio():.2f}")
 print(f"Max Drawdown: {portfolio.max_drawdown():.2%}")
 ```
+
+## CLI Usage
+
+```bash
+# Create a new portfolio
+asset-manager create "My Portfolio"
+
+# Generate report from CSV
+asset-manager report portfolio.csv
+
+# Add asset to portfolio
+asset-manager add portfolio.csv AAPL --shares 100 --cost 150.00 --price 175.00
+```
+
+## Testing
+
+Run the test suite with coverage:
+
+```bash
+pytest --cov=asset_manager --cov-report=term-missing --cov-fail-under=70
+```
+
+## Code Quality
+
+Lint and format checks:
+
+```bash
+ruff check src tests
+ruff format --check src tests
+```
+
+Type checking:
+
+```bash
+mypy src
+```
+
+## Continuous Integration
+
+This project uses GitHub Actions for CI. The pipeline runs on every push and pull request:
+
+- **Lint**: Ruff checks for style and correctness
+- **Type Check**: MyPy static type analysis
+- **Test**: Pytest with coverage enforcement (minimum 70%)
+
+See `.github/workflows/ci.yml` for details.
 
 ## License
 
