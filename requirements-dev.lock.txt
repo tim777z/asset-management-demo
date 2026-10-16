@@ -15,7 +15,7 @@ packaging==26.2
 pluggy==1.6.0
 colorama==0.4.6
 mypy-extensions==1.1.0
-typing-extensions==4.15.0
+typing-extensions==4.16.0
 pathspec==1.1.1
 librt==0.15.0
 ast-serialize==0.11.2
