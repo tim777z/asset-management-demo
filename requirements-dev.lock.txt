@@ -5,7 +5,7 @@
 # Direct dependencies from pyproject.toml
 pytest==9.1.1
 pytest-cov==7.1.0
-ruff==0.16.8
+ruff==0.17.0
 mypy==2.3.1
 
 # Transitive dependencies (pinned for reproducibility)
