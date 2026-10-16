@@ -213,6 +213,82 @@ class TestCLIIntegration:
         assert "invalid choice" in captured.err.lower()
 
 
+class TestCLIValidation:
+    """Argparse-level validation of untrusted command-line input."""
+
+    def _portfolio_file(self, tmp_path):
+        csv_file = tmp_path / "portfolio.csv"
+        csv_file.write_text(
+            "symbol,shares,avg_cost,current_price,asset_class\nAAPL,100,150,175,equity\n"
+        )
+        return csv_file
+
+    @pytest.mark.parametrize(
+        "flag,value",
+        [
+            ("--shares", "-5"),
+            ("--cost", "-1"),
+            ("--price", "-10"),
+            ("--shares", "nan"),
+            ("--cost", "inf"),
+        ],
+    )
+    def test_add_rejects_invalid_numbers(self, tmp_path, flag, value):
+        csv_file = self._portfolio_file(tmp_path)
+        sys.argv = [
+            "asset-manager",
+            "add",
+            str(csv_file),
+            "GOOGL",
+            "--shares",
+            "1",
+            "--cost",
+            "1",
+            flag,
+            value,
+        ]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+
+    def test_add_rejects_invalid_symbol(self, tmp_path):
+        csv_file = self._portfolio_file(tmp_path)
+        sys.argv = [
+            "asset-manager",
+            "add",
+            str(csv_file),
+            "=SUM(A1)",
+            "--shares",
+            "1",
+            "--cost",
+            "1",
+        ]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+
+
+class TestCLILogging:
+    def test_verbose_emits_debug_output(self, tmp_path, capsys):
+        csv_file = tmp_path / "portfolio.csv"
+        csv_file.write_text(
+            "symbol,shares,avg_cost,current_price,asset_class\nAAPL,100,150,175,equity\n"
+        )
+        sys.argv = ["asset-manager", "--verbose", "report", str(csv_file)]
+        main()
+        captured = capsys.readouterr()
+        assert "DEBUG" in captured.err
+        assert "Loaded portfolio" in captured.err
+
+    def test_quiet_still_reports_errors(self, tmp_path, capsys):
+        sys.argv = ["asset-manager", "--quiet", "report", "nonexistent.csv"]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+        captured = capsys.readouterr()
+        assert "Error loading portfolio" in captured.err
+
+
 class TestCLISubprocess:
     """Test CLI via subprocess to verify entry point works."""
 

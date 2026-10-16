@@ -2,10 +2,16 @@ import csv
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from .asset import Asset
 from .metrics import max_drawdown, sharpe_ratio, value_at_risk, volatility
+from .validation import (
+    MAX_CSV_ROWS,
+    MAX_SYMBOL_LENGTH,
+    is_valid_symbol,
+    parse_non_negative_float,
+)
 
 
 class PortfolioLoadError(Exception):
@@ -76,7 +82,7 @@ class Portfolio:
             allocation = {k: v / total for k, v in allocation.items()}
         return allocation
 
-    def holdings_breakdown(self) -> list[dict[str, float | str]]:
+    def holdings_breakdown(self) -> list[dict[str, Union[float, str]]]:
         total = self.total_value()
         return [
             {
@@ -151,7 +157,9 @@ class Portfolio:
         required_columns = {"symbol", "shares", "avg_cost"}
 
         try:
-            with open(filepath, newline="") as f:
+            # utf-8-sig transparently strips a leading BOM, which spreadsheet
+            # and PowerShell exports commonly add, while still reading plain UTF-8.
+            with open(filepath, newline="", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
                 if reader.fieldnames is None:
                     raise PortfolioLoadError(
@@ -166,57 +174,55 @@ class Portfolio:
                     )
 
                 for row_num, row in enumerate(reader, start=2):  # start=2 because header is row 1
+                    if row_num - 1 > MAX_CSV_ROWS:
+                        raise PortfolioLoadError(
+                            f"CSV file exceeds the maximum of {MAX_CSV_ROWS} rows",
+                            filepath=filepath,
+                            row=row_num,
+                        )
                     try:
-                        symbol = row.get("symbol", "").strip()
+                        symbol = (row.get("symbol") or "").strip()
                         if not symbol:
                             raise PortfolioLoadError(
                                 "Empty symbol in row",
                                 filepath=filepath,
                                 row=row_num,
                             )
+                        if not is_valid_symbol(symbol):
+                            raise PortfolioLoadError(
+                                f"Invalid symbol {symbol!r}: expected 1-{MAX_SYMBOL_LENGTH} "
+                                "alphanumeric characters ('.', '_' and '-' allowed after "
+                                "the first)",
+                                filepath=filepath,
+                                row=row_num,
+                            )
 
-                        shares_str = row.get("shares", "").strip()
+                        shares_str = (row.get("shares") or "").strip()
                         if not shares_str:
                             raise PortfolioLoadError(
                                 "Missing shares value",
                                 filepath=filepath,
                                 row=row_num,
                             )
-                        shares = float(shares_str)
-                        if shares < 0:
-                            raise PortfolioLoadError(
-                                "Shares cannot be negative",
-                                filepath=filepath,
-                                row=row_num,
-                            )
+                        shares = parse_non_negative_float(shares_str, "shares")
 
-                        avg_cost_str = row.get("avg_cost", "").strip()
+                        avg_cost_str = (row.get("avg_cost") or "").strip()
                         if not avg_cost_str:
                             raise PortfolioLoadError(
                                 "Missing avg_cost value",
                                 filepath=filepath,
                                 row=row_num,
                             )
-                        avg_cost = float(avg_cost_str)
-                        if avg_cost < 0:
-                            raise PortfolioLoadError(
-                                "Average cost cannot be negative",
-                                filepath=filepath,
-                                row=row_num,
-                            )
+                        avg_cost = parse_non_negative_float(avg_cost_str, "avg_cost")
 
                         current_price = None
-                        current_price_str = row.get("current_price", "").strip()
+                        current_price_str = (row.get("current_price") or "").strip()
                         if current_price_str:
-                            current_price = float(current_price_str)
-                            if current_price < 0:
-                                raise PortfolioLoadError(
-                                    "Current price cannot be negative",
-                                    filepath=filepath,
-                                    row=row_num,
-                                )
+                            current_price = parse_non_negative_float(
+                                current_price_str, "current_price"
+                            )
 
-                        asset_class = row.get("asset_class", "equity").strip() or "equity"
+                        asset_class = (row.get("asset_class") or "equity").strip() or "equity"
 
                         portfolio.add_asset(
                             Asset(
@@ -228,11 +234,7 @@ class Portfolio:
                             )
                         )
                     except ValueError as e:
-                        raise PortfolioLoadError(
-                            f"Invalid numeric value: {e}",
-                            filepath=filepath,
-                            row=row_num,
-                        ) from e
+                        raise PortfolioLoadError(str(e), filepath=filepath, row=row_num) from e
                     except PortfolioLoadError:
                         raise
                     except Exception as e:

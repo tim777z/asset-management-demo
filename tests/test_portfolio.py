@@ -196,3 +196,79 @@ class TestPortfolioFromCSVErrors:
         csv_file.write_text("symbol,shares,avg_cost,asset_class\nBTC,1,50000,crypto\n")
         p = Portfolio.from_csv(str(csv_file))
         assert p.assets[0].asset_class == "crypto"
+
+
+class TestPortfolioFromCSVValidation:
+    """Boundary validation for untrusted CSV input."""
+
+    def test_from_csv_rejects_nan_shares(self, tmp_path):
+        csv_file = tmp_path / "nan_shares.csv"
+        csv_file.write_text("symbol,shares,avg_cost\nAAPL,nan,150\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "not finite" in str(exc_info.value).lower()
+
+    def test_from_csv_rejects_infinite_avg_cost(self, tmp_path):
+        csv_file = tmp_path / "inf_cost.csv"
+        csv_file.write_text("symbol,shares,avg_cost\nAAPL,100,inf\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "not finite" in str(exc_info.value).lower()
+
+    def test_from_csv_rejects_infinite_current_price(self, tmp_path):
+        csv_file = tmp_path / "inf_price.csv"
+        csv_file.write_text("symbol,shares,avg_cost,current_price\nAAPL,100,150,-inf\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "not finite" in str(exc_info.value).lower()
+
+    def test_from_csv_rejects_formula_injection_symbol(self, tmp_path):
+        csv_file = tmp_path / "formula.csv"
+        csv_file.write_text("symbol,shares,avg_cost\n=SUM(A1:A9),100,150\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "invalid symbol" in str(exc_info.value).lower()
+
+    def test_from_csv_rejects_overlong_symbol(self, tmp_path):
+        csv_file = tmp_path / "long_symbol.csv"
+        csv_file.write_text(f"symbol,shares,avg_cost\n{'A' * 33},100,150\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "invalid symbol" in str(exc_info.value).lower()
+
+    def test_from_csv_rejects_control_characters_in_symbol(self, tmp_path):
+        csv_file = tmp_path / "control_symbol.csv"
+        csv_file.write_text("symbol,shares,avg_cost\nAA\tPL,100,150\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "invalid symbol" in str(exc_info.value).lower()
+
+    def test_from_csv_short_row_reports_missing_value(self, tmp_path):
+        csv_file = tmp_path / "short_row.csv"
+        csv_file.write_text("symbol,shares,avg_cost\nAAPL,100\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "missing avg_cost" in str(exc_info.value).lower()
+
+    def test_from_csv_enforces_row_cap(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("asset_manager.portfolio.MAX_CSV_ROWS", 2)
+        csv_file = tmp_path / "too_many_rows.csv"
+        csv_file.write_text("symbol,shares,avg_cost\nAAPL,1,1\nMSFT,1,1\nGOOGL,1,1\n")
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "maximum" in str(exc_info.value).lower()
+
+    def test_from_csv_reads_utf8_content(self, tmp_path):
+        csv_file = tmp_path / "utf8.csv"
+        csv_file.write_text(
+            "symbol,shares,avg_cost,asset_class\nAAPL,1,1,équité\n", encoding="utf-8"
+        )
+        p = Portfolio.from_csv(str(csv_file))
+        assert p.assets[0].asset_class == "équité"
+
+    def test_from_csv_tolerates_utf8_bom(self, tmp_path):
+        csv_file = tmp_path / "bom.csv"
+        csv_file.write_text("symbol,shares,avg_cost\nAAPL,100,150\n", encoding="utf-8-sig")
+        p = Portfolio.from_csv(str(csv_file))
+        assert len(p.assets) == 1
+        assert p.assets[0].symbol == "AAPL"
