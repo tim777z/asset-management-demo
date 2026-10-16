@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
+# Least privilege: the workflow only needs to read the repository.
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint (ruff)
@@ -72,3 +76,73 @@ jobs:
 
       - name: Run pytest with coverage
         run: pytest --cov=asset_manager --cov-report=term-missing --cov-fail-under=70
+
+  lockfile:
+    name: Lockfile (reproducible install)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install from committed lockfile
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.lock.txt
+          pip install -e . --no-deps
+
+      - name: Verify every direct dev dependency is pinned in the lockfile
+        run: |
+          python - <<'PY'
+          import re
+          import tomllib
+          from pathlib import Path
+
+          with open("pyproject.toml", "rb") as fh:
+              dev = tomllib.load(fh)["project"]["optional-dependencies"]["dev"]
+
+          def name(spec: str) -> str:
+              return re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip().lower()
+
+          locked = {
+              line.split("==")[0].strip().lower()
+              for line in Path("requirements-dev.lock.txt").read_text(encoding="utf-8").splitlines()
+              if "==" in line and not line.strip().startswith("#")
+          }
+          missing = {name(spec) for spec in dev} - locked
+          if missing:
+              raise SystemExit(
+                  "requirements-dev.lock.txt is missing pinned packages: "
+                  + ", ".join(sorted(missing))
+              )
+          print("Lockfile pins every direct dev dependency.")
+          PY
+
+      - name: Run pytest against the locked environment
+        run: pytest --cov=asset_manager --cov-report=term-missing --cov-fail-under=70
+
+  audit:
+    name: Dependency Audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pip-audit
+
+      - name: Audit locked dependencies for known vulnerabilities
+        run: pip-audit -r requirements-dev.lock.txt

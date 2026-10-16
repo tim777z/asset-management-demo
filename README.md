@@ -10,7 +10,31 @@ A Python-based portfolio analytics toolkit for tracking assets, calculating risk
 - **CSV Import**: Load portfolio data from CSV files
 - **CLI Interface**: Command-line tool for quick analysis
 
+## Requirements
+
+- Python 3.9 or newer (CI runs on 3.11)
+
 ## Installation
+
+### Quickstart from a fresh clone
+
+```bash
+git clone https://github.com/tim777z/asset-management-demo.git
+cd asset-management-demo
+
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+source .venv/bin/activate
+
+# Reproducible install from the committed lockfile (recommended)
+make install-lock
+# ...or, without make:
+pip install -r requirements-dev.lock.txt
+pip install -e . --no-deps
+
+# Run the test suite
+make test
+```
 
 ### Standard Installation
 
@@ -27,9 +51,7 @@ pip install -r requirements-dev.lock.txt
 pip install -e . --no-deps
 ```
 
-This ensures all dependencies are pinned to specific versions, guaranteeing identical environments across development, CI, and production.
-
-## Usage
+This ensures all dependencies are pinned to specific versions, guaranteeing identical environments across development, CI, and production. CI installs from this lockfile on every push and pull request, so it cannot silently drift from `pyproject.toml`.
 
 ## Usage
 
@@ -60,6 +82,26 @@ asset-manager report portfolio.csv
 asset-manager add portfolio.csv AAPL --shares 100 --cost 150.00 --price 175.00
 ```
 
+Global flags:
+
+- `-v`, `--verbose`: emit debug-level logging to stderr (useful when running unattended).
+- `-q`, `--quiet`: only log errors.
+
+```bash
+asset-manager --verbose report portfolio.csv
+```
+
+Numeric arguments (`--shares`, `--cost`, `--price`) must be finite and non-negative, and symbols must be well-formed tickers; invalid input is rejected before any analytics run.
+
+## Docker
+
+Build and run the CLI in an isolated, non-root container:
+
+```bash
+docker build -t asset-manager .
+docker run --rm asset-manager report /data/portfolio.csv
+```
+
 ## Testing
 
 Run the test suite with coverage:
@@ -83,6 +125,8 @@ Type checking:
 mypy src
 ```
 
+Run everything at once with `make check`.
+
 ## Continuous Integration
 
 This project uses GitHub Actions for CI. The pipeline runs on every push and pull request:
@@ -90,8 +134,14 @@ This project uses GitHub Actions for CI. The pipeline runs on every push and pul
 - **Lint**: Ruff checks for style and correctness
 - **Type Check**: MyPy static type analysis
 - **Test**: Pytest with coverage enforcement (minimum 70%)
+- **Lockfile**: Reproducible install from `requirements-dev.lock.txt`
+- **Audit**: `pip-audit` scans locked dependencies for known vulnerabilities
 
-See `.github/workflows/ci.yml` for details.
+See `.github/workflows/ci.yml` for details. Dependabot keeps dependencies current (`.github/dependabot.yml`).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Release history is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
