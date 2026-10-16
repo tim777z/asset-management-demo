@@ -10,7 +10,7 @@ mypy==2.3.1
 
 # Transitive dependencies (pinned for reproducibility)
 coverage==7.16.1
-iniconfig==2.3.0
+iniconfig==2.3.1
 packaging==26.2
 pluggy==1.6.0
 colorama==0.4.6
