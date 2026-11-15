@@ -1,5 +1,9 @@
 # Asset Management Demo
 
+> **Project type:** Python library and command-line tool (portfolio analytics). This is
+> not infrastructure-as-code tooling: there is no Terraform, Kubernetes, Helm, or
+> Pulumi content in this repository.
+
 A Python-based portfolio analytics toolkit for tracking assets, calculating risk metrics, and generating performance reports.
 
 ## Features
@@ -41,6 +45,19 @@ make test
 ```bash
 pip install -e ".[dev]"
 ```
+
+### Environment configuration
+
+Copy the example environment file and adjust as needed before running the CLI
+or the Docker image:
+
+```bash
+cp .env.example .env
+```
+
+The only variable today is `LOG_LEVEL` (default `INFO`); see `.env.example`
+for the allowed values. The CLI also honours `LOG_LEVEL` from the process
+environment when neither `--verbose` nor `--quiet` is passed.
 
 ### Reproducible Installation (Recommended for Production)
 
