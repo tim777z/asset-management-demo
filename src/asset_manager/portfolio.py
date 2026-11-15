@@ -89,7 +89,7 @@ class Portfolio:
                 "symbol": a.symbol,
                 "shares": a.shares,
                 "avg_cost": a.avg_cost,
-                "current_price": a.current_price or a.avg_cost,
+                "current_price": a.current_price if a.current_price is not None else a.avg_cost,
                 "market_value": a.market_value(),
                 "weight": a.weight(total),
                 "pnl": a.unrealized_pnl(),

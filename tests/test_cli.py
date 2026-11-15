@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 
@@ -324,3 +325,50 @@ class TestCLISubprocess:
         assert result.returncode == 0
         assert "TSLA" in result.stdout
         assert "Total Value:" in result.stdout
+
+
+class TestCLILoggingJson:
+    """Structured (JSON) logging contract for the CLI."""
+
+    def _portfolio_file(self, tmp_path):
+        csv_file = tmp_path / "portfolio.csv"
+        csv_file.write_text(
+            "symbol,shares,avg_cost,current_price,asset_class\nAAPL,100,150,175,equity\n"
+        )
+        return csv_file
+
+    def test_verbose_log_records_are_valid_json(self, tmp_path, capsys):
+        csv_file = self._portfolio_file(tmp_path)
+        sys.argv = ["asset-manager", "--verbose", "report", str(csv_file)]
+        main()
+        captured = capsys.readouterr()
+        records = []
+        for line in captured.err.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError as exc:  # pragma: no cover - failure path
+                pytest.fail(f"non-JSON log line: {line!r} ({exc})")
+        assert records, "expected at least one structured log record under --verbose"
+        for record in records:
+            assert "level" in record
+            assert "message" in record
+        assert any(
+            record.get("level") == "DEBUG" and "Loaded portfolio" in str(record.get("message", ""))
+            for record in records
+        )
+
+    def test_quiet_error_record_is_valid_json(self, tmp_path, capsys):
+        sys.argv = ["asset-manager", "--quiet", "report", "nonexistent.csv"]
+        with pytest.raises(SystemExit):
+            main()
+        captured = capsys.readouterr()
+        records = [json.loads(line) for line in captured.err.splitlines() if line.strip()]
+        assert records, "expected an error record under --quiet"
+        assert any(
+            record.get("level") in {"ERROR", "CRITICAL"}
+            and "Error loading portfolio" in str(record.get("message", ""))
+            for record in records
+        )

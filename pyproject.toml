@@ -25,6 +25,9 @@ asset-manager = "asset_manager.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+asset_manager = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=asset_manager --cov-report=term-missing --cov-fail-under=70"

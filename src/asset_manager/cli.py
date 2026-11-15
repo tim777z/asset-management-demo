@@ -1,5 +1,7 @@
 import argparse
+import json
 import logging
+import os
 import sys
 
 from .asset import Asset
@@ -25,18 +27,46 @@ def _symbol(value: str) -> str:
     return symbol
 
 
+class _JsonFormatter(logging.Formatter):
+    """Emit each log record as a single line of structured JSON.
+
+    Structured output lets downstream tooling (log aggregators, CI, auditors)
+    parse level and message without scraping free-form text, while remaining
+    human-readable enough for a terminal.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, object] = {
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger": record.name,
+        }
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, default=str)
+
+
 def _configure_logging(verbose: bool, quiet: bool) -> None:
-    """Point the package logger at stderr with a level derived from the flags."""
+    """Point the package logger at stderr with a level derived from the flags.
+
+    When neither ``--verbose`` nor ``--quiet`` is given, the ``LOG_LEVEL``
+    environment variable (if set and valid) selects the level, defaulting to
+    ``INFO``. Explicit flags always take precedence.
+    """
     if verbose:
         level = logging.DEBUG
     elif quiet:
         level = logging.ERROR
     else:
         level = logging.INFO
+        env_level = os.environ.get("LOG_LEVEL", "INFO").strip().upper()
+        candidate = getattr(logging, env_level, None)
+        if isinstance(candidate, int):
+            level = candidate
     logger.setLevel(level)
     logger.handlers.clear()
     handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    handler.setFormatter(_JsonFormatter())
     logger.addHandler(handler)
     logger.propagate = False
 
