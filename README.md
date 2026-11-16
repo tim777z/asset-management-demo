@@ -18,6 +18,8 @@ A Python-based portfolio analytics toolkit for tracking assets, calculating risk
 
 - Python 3.9 or newer (CI runs on 3.11)
 
+**Note**: This package has zero third-party runtime dependencies by design, relying only on the Python standard library. This simplifies reproducible installs and eliminates dependency-driven supply-chain risk.
+
 ## Installation
 
 ### Quickstart from a fresh clone
