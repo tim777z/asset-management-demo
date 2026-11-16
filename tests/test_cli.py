@@ -289,6 +289,19 @@ class TestCLILogging:
         captured = capsys.readouterr()
         assert "Error loading portfolio" in captured.err
 
+    def test_log_level_env_var(self, tmp_path, capsys, monkeypatch):
+        """LOG_LEVEL env var is respected when neither --verbose nor --quiet is passed."""
+        csv_file = tmp_path / "portfolio.csv"
+        csv_file.write_text(
+            "symbol,shares,avg_cost,current_price,asset_class\nAAPL,100,150,175,equity\n"
+        )
+        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+        sys.argv = ["asset-manager", "report", str(csv_file)]
+        main()
+        captured = capsys.readouterr()
+        assert "DEBUG" in captured.err
+        assert "Loaded portfolio" in captured.err
+
 
 class TestCLISubprocess:
     """Test CLI via subprocess to verify entry point works."""
