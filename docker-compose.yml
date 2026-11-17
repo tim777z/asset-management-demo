@@ -1,0 +1,8 @@
+services:
+  cli:
+    build: .
+    volumes:
+      - ./data:/data:ro
+    working_dir: /app
+    user: "10001"
+    entrypoint: ["asset-manager"]
