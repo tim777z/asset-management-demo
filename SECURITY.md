@@ -21,7 +21,13 @@ Please do not publicly disclose the issue until a fix has been released.
 ## Security Notes
 
 - This project reads untrusted CSV and command-line input; all such input is
-  validated in `src/asset_manager/validation.py` before use.
-- No secrets or credentials are stored by this project.
+  validated in `src/asset_manager/validation.py` before use (symbol allowlist,
+  numeric parsing via `decimal.Decimal`, row caps). CSV input is treated as
+  untrusted; avoid opening unreviewed files.
+- No secrets or credentials are stored by this project. Do not commit real
+  portfolio data containing sensitive identifiers to public forks.
 - Dependencies are pinned via `requirements-dev.lock.txt` and audited with
-  `pip-audit` in CI.
+  `pip-audit` in CI. Runtime has zero third-party dependencies by design.
+- **Project scope:** this is a Python library/CLI (not infrastructure-as-code).
+  Security reviews should focus on input validation, dependency hygiene, and
+  safe file handling.

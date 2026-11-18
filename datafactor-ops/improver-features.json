@@ -1,1 +1,29 @@
-{"features":[{"id": "cli-logging-tests", "status": "verified", "test": "pytest -xvs tests/test_cli.py::TestCLILogging::test_log_level_env_var"}, {"id": "zero-dep-docs", "status": "verified", "test": "README.md contains note about zero third-party runtime deps"}, {"id": "lockfile-verification", "status": "verified", "test": "python lockfile verification passes"}]}
+{
+  "features": [
+    {
+      "id": "fix-portfolio-duplicate-missing-avg-cost",
+      "status": "verified",
+      "test": "pytest tests/test_portfolio.py -q"
+    },
+    {
+      "id": "integrate-csvrowschema-in-portfolio",
+      "status": "verified",
+      "test": "pytest tests/test_portfolio.py -q"
+    },
+    {
+      "id": "clarify-project-classification-docs",
+      "status": "not_started",
+      "test": "manual: README/pyproject/SECURITY clarify non-IaC Python CLI"
+    },
+    {
+      "id": "improve-docker-compose-reproducibility",
+      "status": "not_started",
+      "test": "manual: docker compose config/README examples"
+    },
+    {
+      "id": "add-compose-example-to-readme",
+      "status": "not_started",
+      "test": "manual: README Docker section mentions compose"
+    }
+  ]
+}

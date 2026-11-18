@@ -201,3 +201,32 @@
 2026-11-17 08:46:13,447 - mcp.server.lowlevel.server - INFO - [server.py:534] - Processing request of type ListPromptsRequest
 2026-11-17 08:46:13,447 - mcp.server.lowlevel.server - DEBUG - [server.py:537] - Dispatching request of type ListPromptsRequest
 2026-11-17 08:46:13,449 - mcp.server.lowlevel.server - DEBUG - [server.py:572] - Response sent
+2026-11-18 15:48:31,263 - mcp.server.lowlevel.server - DEBUG - [server.py:145] - Initializing server 'UnrealMCP'
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:384] - Registering handler for ListToolsRequest
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:406] - Registering handler for CallToolRequest
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:252] - Registering handler for ListResourcesRequest
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:286] - Registering handler for ReadResourceRequest
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:222] - Registering handler for PromptListRequest
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:239] - Registering handler for GetPromptRequest
+2026-11-18 15:48:31,329 - mcp.server.lowlevel.server - DEBUG - [server.py:267] - Registering handler for ListResourceTemplatesRequest
+2026-11-18 15:48:31,831 - UnrealMCP - INFO - [editor_tools.py:369] - Editor tools registered successfully
+2026-11-18 15:48:31,872 - UnrealMCP - INFO - [blueprint_tools.py:420] - Blueprint tools registered successfully
+2026-11-18 15:48:31,908 - UnrealMCP - INFO - [node_tools.py:430] - Blueprint node tools registered successfully
+2026-11-18 15:48:31,923 - UnrealMCP - INFO - [project_tools.py:64] - Project tools registered successfully
+2026-11-18 15:48:31,981 - UnrealMCP - INFO - [umg_tools.py:333] - UMG tools registered successfully
+2026-11-18 15:48:31,996 - UnrealMCP - INFO - [unreal_mcp_server.py:376] - Starting MCP server with stdio transport
+2026-11-18 15:48:32,015 - asyncio - DEBUG - [proactor_events.py:634] - Using proactor: IocpProactor
+2026-11-18 15:48:32,040 - UnrealMCP - INFO - [unreal_mcp_server.py:242] - UnrealMCP server starting up
+2026-11-18 15:48:32,040 - UnrealMCP - INFO - [unreal_mcp_server.py:49] - Connecting to Unreal at 127.0.0.1:55557...
+2026-11-18 15:48:33,082 - UnrealMCP - ERROR - [unreal_mcp_server.py:67] - Failed to connect to Unreal: [WinError 10061] No connection could be made because the target machine actively refused it
+2026-11-18 15:48:33,082 - UnrealMCP - WARNING - [unreal_mcp_server.py:213] - Could not connect to Unreal Engine
+2026-11-18 15:48:33,082 - UnrealMCP - WARNING - [unreal_mcp_server.py:248] - Could not connect to Unreal Engine on startup
+2026-11-18 15:48:33,371 - mcp.server.lowlevel.server - DEBUG - [server.py:491] - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-11-18 15:48:33,371 - mcp.server.lowlevel.server - DEBUG - [server.py:491] - Received message: <mcp.shared.session.RequestResponder object at 0x0000019F030BBA10>
+2026-11-18 15:48:33,371 - mcp.server.lowlevel.server - INFO - [server.py:534] - Processing request of type ListToolsRequest
+2026-11-18 15:48:33,371 - mcp.server.lowlevel.server - DEBUG - [server.py:537] - Dispatching request of type ListToolsRequest
+2026-11-18 15:48:33,387 - mcp.server.lowlevel.server - DEBUG - [server.py:572] - Response sent
+2026-11-18 15:48:33,401 - mcp.server.lowlevel.server - DEBUG - [server.py:491] - Received message: <mcp.shared.session.RequestResponder object at 0x0000019F030BB2C0>
+2026-11-18 15:48:33,401 - mcp.server.lowlevel.server - INFO - [server.py:534] - Processing request of type ListPromptsRequest
+2026-11-18 15:48:33,401 - mcp.server.lowlevel.server - DEBUG - [server.py:537] - Dispatching request of type ListPromptsRequest
+2026-11-18 15:48:33,401 - mcp.server.lowlevel.server - DEBUG - [server.py:572] - Response sent
