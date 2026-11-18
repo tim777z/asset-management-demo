@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "asset-manager"
 version = "1.0.0"
-description = "Portfolio analytics toolkit for asset tracking and risk metrics"
+description = "Portfolio analytics toolkit and CLI for asset tracking and risk metrics (Python library)."
 readme = "README.md"
 license = {text = "Proprietary"}
 requires-python = ">=3.9"

@@ -118,8 +118,18 @@ Build and run the CLI in an isolated, non-root container:
 
 ```bash
 docker build -t asset-manager .
-docker run --rm asset-manager report /data/portfolio.csv
+docker run --rm -v "${PWD}/data:/data:ro" asset-manager report /data/portfolio.csv
 ```
+
+### Docker Compose (recommended for local reproducibility)
+
+A minimal `docker-compose.yml` is provided. Place your CSV files under `./data` (mounted read-only):
+
+```bash
+docker compose run --rm cli report /data/portfolio.csv
+```
+
+> Note: this repository is a Python CLI/library (not infrastructure-as-code). Compose standardizes a one-command local run only.
 
 ## Testing
 

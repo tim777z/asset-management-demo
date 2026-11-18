@@ -212,16 +212,11 @@ class Portfolio:
                                 filepath=filepath,
                                 row=row_num,
                             )
-                            raise PortfolioLoadError(
-                                "Missing avg_cost value",
-                                filepath=filepath,
-                                row=row_num,
-                            )
 
                         shares = parse_non_negative_float(shares_str, "shares")
                         avg_cost = parse_non_negative_float(avg_cost_str, "avg_cost")
 
-                        current_price = None
+                        current_price = 0.0
                         if current_price_str:
                             current_price = parse_non_negative_float(
                                 current_price_str, "current_price"
@@ -234,7 +229,7 @@ class Portfolio:
                                 symbol=symbol,
                                 shares=shares,
                                 avg_cost=avg_cost,
-                                current_price=current_price,
+                                current_price=current_price if current_price_str else None,
                                 asset_class=asset_class,
                             )
                         )
