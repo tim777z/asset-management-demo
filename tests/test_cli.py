@@ -385,3 +385,92 @@ class TestCLILoggingJson:
             and "Error loading portfolio" in str(record.get("message", ""))
             for record in records
         )
+
+
+class TestCLIHistory:
+    """Risk metrics computed from a validated date,value history CSV."""
+
+    def _history_file(self, tmp_path, content=None, encoding="utf-8"):
+        csv_file = tmp_path / "history.csv"
+        csv_file.write_text(
+            content
+            if content is not None
+            else "date,value\n2026-01-01,100\n2026-01-02,110\n2026-01-03,99\n",
+            encoding=encoding,
+        )
+        return csv_file
+
+    def test_history_metrics(self, tmp_path, capsys):
+        csv_file = self._history_file(tmp_path)
+        sys.argv = ["asset-manager", "history", str(csv_file)]
+        main()
+        captured = capsys.readouterr()
+        assert "Observations: 3" in captured.out
+        assert "Mean daily return:" in captured.out
+        assert "Sharpe ratio:" in captured.out
+        assert "Sortino ratio:" in captured.out
+        assert "Volatility (annualized):" in captured.out
+        assert "Max drawdown:" in captured.out
+        assert "Value at Risk (95%):" in captured.out
+
+    def test_history_tolerates_bom(self, tmp_path, capsys):
+        csv_file = self._history_file(
+            tmp_path, "date,value\n2026-01-01,100\n2026-01-02,105\n", encoding="utf-8-sig"
+        )
+        sys.argv = ["asset-manager", "history", str(csv_file)]
+        main()
+        captured = capsys.readouterr()
+        assert "Observations: 2" in captured.out
+
+    def test_history_help_lists_subcommand(self, capsys):
+        sys.argv = ["asset-manager", "--help"]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+        assert "history" in capsys.readouterr().out
+
+    @pytest.mark.parametrize(
+        "content,expected_error",
+        [
+            ("date\n2026-01-01\n", "missing required columns"),
+            ("date,value\nnot-a-date,100\n", "invalid isoformat"),
+            ("date,value\n2026-01-01,nan\n", "not finite"),
+            ("date,value\n2026-01-01,-100\n", "cannot be negative"),
+            ("date,value\n", "no valid history rows"),
+            ("", "empty or has no header"),
+        ],
+    )
+    def test_history_rejects_invalid_input(self, tmp_path, capsys, content, expected_error):
+        csv_file = self._history_file(tmp_path, content)
+        sys.argv = ["asset-manager", "history", str(csv_file)]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+        captured = capsys.readouterr()
+        assert expected_error in captured.err.lower()
+        assert "Error loading history" in captured.err
+
+    def test_history_missing_file(self, capsys):
+        sys.argv = ["asset-manager", "history", "missing-history.csv"]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+        assert "not found" in capsys.readouterr().err.lower()
+
+    def test_history_enforces_row_cap(self, tmp_path, capsys, monkeypatch):
+        monkeypatch.setattr("asset_manager.cli.MAX_CSV_ROWS", 1)
+        csv_file = self._history_file(tmp_path)
+        sys.argv = ["asset-manager", "history", str(csv_file)]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+        assert "maximum" in capsys.readouterr().err.lower()
+
+    def test_history_error_is_structured_json(self, tmp_path, capsys):
+        csv_file = self._history_file(tmp_path, "date,value\n")
+        sys.argv = ["asset-manager", "history", str(csv_file)]
+        with pytest.raises(SystemExit):
+            main()
+        lines = [line for line in capsys.readouterr().err.splitlines() if line.strip()]
+        records = [json.loads(line) for line in lines]
+        assert any(record.get("level") == "ERROR" for record in records)

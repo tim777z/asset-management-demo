@@ -272,3 +272,19 @@ class TestPortfolioFromCSVValidation:
         p = Portfolio.from_csv(str(csv_file))
         assert len(p.assets) == 1
         assert p.assets[0].symbol == "AAPL"
+
+    def test_from_csv_rejects_formula_injection_in_asset_class(self, tmp_path):
+        csv_file = tmp_path / "formula_class.csv"
+        csv_file.write_text(
+            'symbol,shares,avg_cost,asset_class\nAAPL,100,150,=HYPERLINK("http://evil")\n'
+        )
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "unsafe value for asset_class" in str(exc_info.value).lower()
+
+    def test_from_csv_rejects_control_characters_in_asset_class(self, tmp_path):
+        csv_file = tmp_path / "control_class.csv"
+        csv_file.write_text('symbol,shares,avg_cost,asset_class\nAAPL,100,150,"equity\nnext,row"\n')
+        with pytest.raises(PortfolioLoadError) as exc_info:
+            Portfolio.from_csv(str(csv_file))
+        assert "unsafe value for asset_class" in str(exc_info.value).lower()

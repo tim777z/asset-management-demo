@@ -10,10 +10,16 @@ on:
 permissions:
   contents: read
 
+# Superseded pushes should not burn runner minutes; the latest commit wins.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint (ruff)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,6 +44,7 @@ jobs:
   typecheck:
     name: Type Check (mypy)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,6 +66,7 @@ jobs:
   test:
     name: Test (pytest)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -80,6 +88,7 @@ jobs:
   lockfile:
     name: Lockfile (reproducible install)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -95,6 +104,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.lock.txt
           pip install -e . --no-deps
+
+      - name: Verify conventional requirements shim targets the lockfile
+        run: grep -qx -- '-r requirements-dev.lock.txt' requirements-dev.txt
 
       - name: Verify every direct dev dependency is pinned in the lockfile
         run: |
@@ -129,6 +141,7 @@ jobs:
   audit:
     name: Dependency Audit (pip-audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

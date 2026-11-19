@@ -8,8 +8,8 @@ from .asset import Asset
 from .metrics import max_drawdown, sharpe_ratio, value_at_risk, volatility
 from .validation import (
     MAX_CSV_ROWS,
-    MAX_SYMBOL_LENGTH,
-    is_valid_symbol,
+    CsvRowSchema,
+    is_safe_text_field,
     parse_non_negative_float,
 )
 
@@ -188,15 +188,6 @@ class Portfolio:
                                 filepath=filepath,
                                 row=row_num,
                             )
-                        if not is_valid_symbol(symbol):
-                            raise PortfolioLoadError(
-                                f"Invalid symbol {symbol!r}: expected 1-{MAX_SYMBOL_LENGTH} "
-                                "alphanumeric characters ('.', '_' and '-' allowed after "
-                                "the first)",
-                                filepath=filepath,
-                                row=row_num,
-                            )
-
                         shares_str = (row.get("shares") or "").strip()
                         avg_cost_str = (row.get("avg_cost") or "").strip()
                         current_price_str = (row.get("current_price") or "").strip()
@@ -223,14 +214,33 @@ class Portfolio:
                             )
 
                         asset_class = (row.get("asset_class") or "equity").strip() or "equity"
+                        if not is_safe_text_field(asset_class):
+                            raise PortfolioLoadError(
+                                f"Unsafe value for asset_class {asset_class!r}",
+                                filepath=filepath,
+                                row=row_num,
+                            )
+
+                        # One validation contract for the whole row: the schema
+                        # re-checks the symbol, numeric bounds and finiteness
+                        # before any value reaches the analytics code.
+                        validated = CsvRowSchema(
+                            symbol=symbol,
+                            shares=shares,
+                            avg_cost=avg_cost,
+                            current_price=current_price,
+                            asset_class=asset_class,
+                        )
 
                         portfolio.add_asset(
                             Asset(
-                                symbol=symbol,
-                                shares=shares,
-                                avg_cost=avg_cost,
-                                current_price=current_price if current_price_str else None,
-                                asset_class=asset_class,
+                                symbol=validated.symbol,
+                                shares=validated.shares,
+                                avg_cost=validated.avg_cost,
+                                current_price=(
+                                    validated.current_price if current_price_str else None
+                                ),
+                                asset_class=validated.asset_class,
                             )
                         )
                     except ValueError as e:

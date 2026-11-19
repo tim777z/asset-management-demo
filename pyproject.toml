@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,12 +7,14 @@ name = "asset-manager"
 version = "1.0.0"
 description = "Portfolio analytics toolkit and CLI for asset tracking and risk metrics (Python library)."
 readme = "README.md"
-license = {text = "Proprietary"}
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = []
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2,<2",
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.5.0",
