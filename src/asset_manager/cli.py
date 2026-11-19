@@ -1,12 +1,22 @@
 import argparse
+import csv
 import json
 import logging
 import os
 import sys
+from datetime import datetime
 
 from .asset import Asset
+from .metrics import (
+    max_drawdown,
+    mean,
+    sharpe_ratio,
+    sortino_ratio,
+    value_at_risk,
+    volatility,
+)
 from .portfolio import Portfolio, PortfolioLoadError
-from .validation import is_valid_symbol, parse_non_negative_float
+from .validation import MAX_CSV_ROWS, is_valid_symbol, parse_non_negative_float
 
 logger = logging.getLogger("asset_manager.cli")
 
@@ -44,6 +54,66 @@ class _JsonFormatter(logging.Formatter):
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, default=str)
+
+
+def _load_daily_returns(filepath: str) -> list[float]:
+    """Read a ``date,value`` history CSV and return its daily simple returns.
+
+    The loader applies the same trust-boundary rules as the holdings loader:
+    UTF-8 (with optional BOM), required-column checks, a row cap, strict date
+    parsing and finite non-negative values. The first observation has no prior
+    value and therefore yields a 0% return.
+    """
+    if not os.path.exists(filepath):
+        raise PortfolioLoadError("History file not found", filepath=filepath)
+
+    values: list[float] = []
+    try:
+        with open(filepath, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames is None:
+                raise PortfolioLoadError(
+                    "History file is empty or has no header", filepath=filepath
+                )
+            missing = {"date", "value"} - set(reader.fieldnames)
+            if missing:
+                raise PortfolioLoadError(
+                    f"Missing required columns: {', '.join(sorted(missing))}",
+                    filepath=filepath,
+                )
+
+            for row_num, row in enumerate(reader, start=2):
+                if row_num - 1 > MAX_CSV_ROWS:
+                    raise PortfolioLoadError(
+                        f"History file exceeds the maximum of {MAX_CSV_ROWS} rows",
+                        filepath=filepath,
+                        row=row_num,
+                    )
+                try:
+                    raw_date = (row.get("date") or "").strip()
+                    raw_value = (row.get("value") or "").strip()
+                    if not raw_date or not raw_value:
+                        raise PortfolioLoadError(
+                            "Empty date or value in row", filepath=filepath, row=row_num
+                        )
+                    _ = datetime.fromisoformat(raw_date)
+                    values.append(parse_non_negative_float(raw_value, "value"))
+                except ValueError as exc:
+                    raise PortfolioLoadError(str(exc), filepath=filepath, row=row_num) from exc
+                except PortfolioLoadError:
+                    raise
+    except PortfolioLoadError:
+        raise
+    except OSError as exc:
+        raise PortfolioLoadError(f"Failed to read file: {exc}", filepath=filepath) from exc
+
+    if not values:
+        raise PortfolioLoadError("No valid history rows found", filepath=filepath)
+
+    returns: list[float] = [0.0]
+    for previous, current in zip(values, values[1:]):
+        returns.append((current - previous) / previous if previous > 0 else 0.0)
+    return returns
 
 
 def _configure_logging(verbose: bool, quiet: bool) -> None:
@@ -91,6 +161,11 @@ def main() -> None:
     report_cmd = subparsers.add_parser("report", help="Generate report")
     report_cmd.add_argument("portfolio", help="Portfolio file")
 
+    history_cmd = subparsers.add_parser(
+        "history", help="Compute risk metrics from a date,value history CSV"
+    )
+    history_cmd.add_argument("history", help="History CSV with date and value columns")
+
     args = parser.parse_args()
     _configure_logging(args.verbose, args.quiet)
 
@@ -123,6 +198,20 @@ def main() -> None:
             sys.exit(1)
         logger.debug("Loaded portfolio %r with %d holdings", p.name, len(p.assets))
         print(p.generate_report())
+    elif args.command == "history":
+        try:
+            returns = _load_daily_returns(args.history)
+        except PortfolioLoadError as e:
+            logger.error("Error loading history: %s", e)
+            sys.exit(1)
+        logger.debug("Loaded %d history observations", len(returns))
+        print(f"Observations: {len(returns)}")
+        print(f"Mean daily return: {mean(returns):.2%}")
+        print(f"Sharpe ratio: {sharpe_ratio(returns):.4f}")
+        print(f"Sortino ratio: {sortino_ratio(returns):.4f}")
+        print(f"Volatility (annualized): {volatility(returns):.2%}")
+        print(f"Max drawdown: {max_drawdown(returns):.2%}")
+        print(f"Value at Risk (95%): {value_at_risk(returns):.2%}")
     else:
         parser.print_help()
 

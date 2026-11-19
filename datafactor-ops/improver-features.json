@@ -1,29 +1,39 @@
 {
   "features": [
     {
-      "id": "fix-portfolio-duplicate-missing-avg-cost",
+      "id": "harden-csvrowschema-and-integrate-at-boundary",
       "status": "verified",
-      "test": "pytest tests/test_portfolio.py -q"
+      "test": "pytest tests/test_validation.py tests/test_portfolio.py -q"
     },
     {
-      "id": "integrate-csvrowschema-in-portfolio",
+      "id": "reject-formula-injection-prefixes-in-asset-class",
       "status": "verified",
-      "test": "pytest tests/test_portfolio.py -q"
+      "test": "pytest tests/test_validation.py tests/test_portfolio.py -q"
     },
     {
-      "id": "clarify-project-classification-docs",
-      "status": "not_started",
-      "test": "manual: README/pyproject/SECURITY clarify non-IaC Python CLI"
+      "id": "add-metrics-cli-subcommand-with-tests",
+      "status": "verified",
+      "test": "pytest tests/test_cli.py tests/test_metrics.py -q"
     },
     {
-      "id": "improve-docker-compose-reproducibility",
-      "status": "not_started",
-      "test": "manual: docker compose config/README examples"
+      "id": "document-classification-observability-and-lockfile-discovery",
+      "status": "verified",
+      "test": "manual: README/SECURITY/pyproject classification, observability, lockfile docs"
     },
     {
-      "id": "add-compose-example-to-readme",
-      "status": "not_started",
-      "test": "manual: README Docker section mentions compose"
+      "id": "pin-build-tool-for-fresh-clone",
+      "status": "verified",
+      "test": "CI lockfile consistency check: missing pins none; pytest full suite"
+    },
+    {
+      "id": "modernize-pyproject-license-metadata",
+      "status": "verified",
+      "test": "python -m build --wheel --no-isolation (no deprecation warning)"
+    },
+    {
+      "id": "statically-validate-docker-and-compose-fragments",
+      "status": "verified",
+      "test": "manual: Dockerfile/compose/CI reviewed statically; no Docker engine available"
     }
   ]
 }
