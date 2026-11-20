@@ -16,7 +16,12 @@ from .metrics import (
     volatility,
 )
 from .portfolio import Portfolio, PortfolioLoadError
-from .validation import MAX_CSV_ROWS, is_valid_symbol, parse_non_negative_float
+from .validation import (
+    MAX_CSV_ROWS,
+    is_safe_text_field,
+    is_valid_symbol,
+    parse_non_negative_float,
+)
 
 logger = logging.getLogger("asset_manager.cli")
 
@@ -35,6 +40,19 @@ def _symbol(value: str) -> str:
     if not is_valid_symbol(symbol):
         raise argparse.ArgumentTypeError(f"invalid symbol: {value!r}")
     return symbol
+
+
+def _asset_class(value: str) -> str:
+    """Apply the CSV schema's free-text rules to the CLI --class argument.
+
+    CSV rows are checked by ``CsvRowSchema``; without this type the CLI path
+    could inject spreadsheet formulas or control characters that the CSV path
+    rejects, breaking the single validation contract documented in the README.
+    """
+    normalized = value.strip() or "equity"
+    if not is_safe_text_field(normalized):
+        raise argparse.ArgumentTypeError(f"invalid asset class: {value!r}")
+    return normalized
 
 
 class _JsonFormatter(logging.Formatter):
@@ -141,7 +159,7 @@ def _configure_logging(verbose: bool, quiet: bool) -> None:
     logger.propagate = False
 
 
-def main() -> None:
+def _run_cli() -> None:
     parser = argparse.ArgumentParser(description="Asset Management Toolkit")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
     parser.add_argument("-q", "--quiet", action="store_true", help="Only log errors")
@@ -156,7 +174,7 @@ def main() -> None:
     add_cmd.add_argument("--shares", type=_non_negative_float, required=True)
     add_cmd.add_argument("--cost", type=_non_negative_float, required=True)
     add_cmd.add_argument("--price", type=_non_negative_float, default=None)
-    add_cmd.add_argument("--class", dest="asset_class", default="equity")
+    add_cmd.add_argument("--class", dest="asset_class", type=_asset_class, default="equity")
 
     report_cmd = subparsers.add_parser("report", help="Generate report")
     report_cmd.add_argument("portfolio", help="Portfolio file")
@@ -214,6 +232,24 @@ def main() -> None:
         print(f"Value at Risk (95%): {value_at_risk(returns):.2%}")
     else:
         parser.print_help()
+
+
+def main() -> None:
+    """CLI entry point: turn unexpected failures into one structured error.
+
+    Expected errors already exit explicitly with a structured log record.
+    Any other exception is logged with traceback detail for operators as a
+    single JSON record, then surfaced as a non-zero exit status. This avoids
+    leaking local paths and internal state in a bare Python traceback while
+    keeping the failure machine-readable for automation and log aggregation.
+    """
+    try:
+        _run_cli()
+    except Exception:  # SystemExit/KeyboardInterrupt are BaseException and pass through
+        if not logger.handlers:
+            _configure_logging(verbose=False, quiet=False)
+        logger.error("Unexpected error in asset-manager", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

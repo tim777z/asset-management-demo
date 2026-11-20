@@ -23,7 +23,10 @@ MAX_CSV_ROWS = 100_000
 # The first character must be alphanumeric, which also rejects spreadsheet
 # formula-injection prefixes (``=``, ``+``, ``-``, ``@``) that could be
 # dangerous if the data is later exported to CSV and opened in Excel.
-_SYMBOL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+# ``fullmatch`` is used instead of a ``$`` anchor: in Python, ``$`` also matches
+# immediately before a trailing newline, so ``"AAPL\n"`` would pass the old
+# pattern and forge an extra row if the symbol is written back to a CSV report.
+_SYMBOL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 # Leading characters that spreadsheet applications interpret as formulas. A
 # free-text field such as ``asset_class`` is not a ticker, so it cannot use the
@@ -31,7 +34,10 @@ _SYMBOL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 # report or an exported CSV. Control characters (including CR/LF) are rejected
 # as well because they can forge additional CSV rows.
 _UNSAFE_TEXT_LEADERS = frozenset("=+-@")
-_CONTROL_CHARACTERS = frozenset(chr(code) for code in range(32))
+# C0 controls plus DEL and the Unicode line/paragraph separators. Checking only
+# ``range(32)`` misses U+2028/U+2029, which spreadsheet and text tools can treat
+# as row breaks just like CR/LF, enabling CSV row forgery from a free-text field.
+_CONTROL_CHARACTERS = frozenset([*(chr(code) for code in range(32)), "\x7f", "\u2028", "\u2029"])
 
 
 def is_safe_text_field(value: str) -> bool:
@@ -96,7 +102,7 @@ def is_valid_symbol(symbol: str) -> bool:
     """Return ``True`` if *symbol* is a well-formed ticker."""
     if not symbol or len(symbol) > MAX_SYMBOL_LENGTH:
         return False
-    return _SYMBOL_RE.match(symbol) is not None
+    return _SYMBOL_RE.fullmatch(symbol) is not None
 
 
 def parse_decimal(value: str, field: str) -> float:
@@ -113,7 +119,13 @@ def parse_decimal(value: str, field: str) -> float:
         raise ValueError(f"Invalid numeric value for {field}: {value!r} is not finite")
     if d < 0:
         raise ValueError(f"{field} cannot be negative")
-    return float(d)
+    result = float(d)
+    if not math.isfinite(result):
+        # Decimal can represent magnitudes far beyond float's range; the
+        # conversion silently yields inf, which would break the documented
+        # "finite float" contract and poison downstream analytics.
+        raise ValueError(f"Numeric value for {field} is too large")
+    return result
 
 
 def parse_non_negative_float(value: str, field: str) -> float:

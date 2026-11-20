@@ -131,7 +131,7 @@ Global flags:
 asset-manager --verbose report portfolio.csv
 ```
 
-Numeric arguments (`--shares`, `--cost`, `--price`) must be finite and non-negative, and symbols must be well-formed tickers; invalid input is rejected before any analytics run. Free-text fields such as `asset_class` additionally reject spreadsheet formula prefixes (`=`, `+`, `-`, `@`) and control characters, so a hostile CSV cannot become a live formula when a report is exported and opened in Excel.
+Numeric arguments (`--shares`, `--cost`, `--price`) must be finite and non-negative, and symbols must be well-formed tickers; invalid input is rejected before any analytics run. Free-text fields such as `asset_class` additionally reject spreadsheet formula prefixes (`=`, `+`, `-`, `@`) and control characters, so a hostile CSV cannot become a live formula when a report is exported and opened in Excel. The CLI `--class` argument applies those same free-text rules, so the CSV and command-line paths share one validation contract.
 
 ## Observability
 
@@ -140,8 +140,12 @@ in `src/asset_manager/cli.py`. Each record carries `level`, `message` and `logge
 keys, with an `exception` key when applicable, so records can be piped directly to a
 log aggregator or captured by CI without scraping free-form text. Use `--verbose`
 for debug-level tracing and `--quiet` to suppress everything below errors; when
-neither flag is supplied, `LOG_LEVEL` controls verbosity (default `INFO`). There is
-no network listener or health endpoint because this is a batch CLI, not a service.
+neither flag is supplied, `LOG_LEVEL` controls verbosity (default `INFO`). An
+unexpected exception is caught at the CLI boundary and logged as a single
+structured `ERROR` record (with an `exception` field for operators) before the
+process exits with status 1, so automation gets a parseable failure instead of
+a bare Python traceback. There is no network listener or health endpoint because
+this is a batch CLI, not a service.
 
 ## Docker
 

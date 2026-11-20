@@ -16,3 +16,7 @@ build
 tests
 Dockerfile
 .dockerignore
+# Local environment files must never enter the Docker build context.
+.env
+.env.*
+!.env.example

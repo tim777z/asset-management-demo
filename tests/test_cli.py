@@ -268,6 +268,45 @@ class TestCLIValidation:
             main()
         assert exc_info.value.code != 0
 
+    @pytest.mark.parametrize(
+        "asset_class",
+        ['=HYPERLINK("http://evil","click")', "@SUM(A1)", "a\nb", "a\x00b", "a\u2028b"],
+    )
+    def test_add_rejects_unsafe_asset_class(self, tmp_path, asset_class):
+        csv_file = self._portfolio_file(tmp_path)
+        sys.argv = [
+            "asset-manager",
+            "add",
+            str(csv_file),
+            "GOOGL",
+            "--shares",
+            "1",
+            "--cost",
+            "1",
+            "--class",
+            asset_class,
+        ]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
+
+    def test_add_normalises_empty_asset_class(self, tmp_path, capsys):
+        csv_file = self._portfolio_file(tmp_path)
+        sys.argv = [
+            "asset-manager",
+            "add",
+            str(csv_file),
+            "GOOGL",
+            "--shares",
+            "1",
+            "--cost",
+            "1",
+            "--class",
+            "   ",
+        ]
+        main()
+        assert "Added GOOGL" in capsys.readouterr().out
+
 
 class TestCLILogging:
     def test_verbose_emits_debug_output(self, tmp_path, capsys):
@@ -383,6 +422,25 @@ class TestCLILoggingJson:
         assert any(
             record.get("level") in {"ERROR", "CRITICAL"}
             and "Error loading portfolio" in str(record.get("message", ""))
+            for record in records
+        )
+
+    def test_unexpected_exception_is_structured_and_exits_nonzero(self, monkeypatch, capsys):
+        def boom(*args, **kwargs):
+            raise RuntimeError("internal detail")
+
+        monkeypatch.setattr("asset_manager.cli.Portfolio.from_csv", boom)
+        sys.argv = ["asset-manager", "report", "anything.csv"]
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert captured.out == "", "unexpected errors must not be printed to stdout"
+        records = [json.loads(line) for line in captured.err.splitlines() if line.strip()]
+        assert any(
+            record.get("level") == "ERROR"
+            and "Unexpected error in asset-manager" in str(record.get("message", ""))
+            and "RuntimeError: internal detail" in str(record.get("exception", ""))
             for record in records
         )
 

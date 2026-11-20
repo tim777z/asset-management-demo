@@ -67,6 +67,12 @@ class TestCsvRowSchema:
         with pytest.raises(ValueError, match="Invalid symbol"):
             CsvRowSchema(symbol="A" * (MAX_SYMBOL_LENGTH + 1), shares=1, avg_cost=1)
 
+    def test_rejects_symbol_with_trailing_newline(self):
+        # A '$' anchor also matches immediately before a trailing newline, so
+        # "AAPL\n" used to pass and could forge an extra row in an exported CSV.
+        with pytest.raises(ValueError, match="Invalid symbol"):
+            CsvRowSchema(symbol="AAPL\n", shares=1, avg_cost=1)
+
     @pytest.mark.parametrize("symbol", ["AAPL", "BTC-USD", "BRK.B", "abc_123"])
     def test_accepts_valid_symbols(self, symbol):
         assert CsvRowSchema(symbol=symbol, shares=1, avg_cost=1).symbol == symbol
@@ -90,6 +96,10 @@ class TestIsValidSymbol:
     def test_invalid(self, symbol):
         assert is_valid_symbol(symbol) is False
 
+    @pytest.mark.parametrize("symbol", ["AAPL\n", "AAPL\r\n", "AAPL\u2028", "AA\nPL"])
+    def test_rejects_line_breaks(self, symbol):
+        assert is_valid_symbol(symbol) is False
+
 
 class TestIsSafeTextField:
     @pytest.mark.parametrize("value", ["equity", "équité", "fixed income", "  spaced  "])
@@ -102,6 +112,10 @@ class TestIsSafeTextField:
     def test_unsafe_or_empty(self, value):
         # An empty field is normalised to the default before validation.
         assert is_safe_text_field(value) is (value == "")
+
+    @pytest.mark.parametrize("value", ["a\x7fb", "a\u2028b", "a\u2029b"])
+    def test_rejects_del_and_unicode_line_separators(self, value):
+        assert is_safe_text_field(value) is False
 
 
 class TestParseDecimal:
@@ -129,3 +143,8 @@ class TestParseDecimal:
         value = parse_decimal("1.5", "shares")
         assert isinstance(value, float)
         assert math.isfinite(value)
+
+    def test_rejects_value_that_overflows_float(self):
+        # Decimal holds the magnitude, but the float conversion yields inf.
+        with pytest.raises(ValueError, match="too large"):
+            parse_decimal("1e10000", "shares")
