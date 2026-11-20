@@ -13,3 +13,9 @@ htmlcov/
 *.egg
 .venv/
 venv/
+
+# Local environment overrides (README instructs copying .env.example to .env).
+# Keep real values out of commits; the tracked example remains available.
+.env
+.env.*
+!.env.example

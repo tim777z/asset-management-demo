@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with tests covering success and malformed-input paths.
 - Dedicated `tests/test_validation.py` covering `CsvRowSchema`, symbol rules and
   numeric parsing at the trust boundary.
+- Dedicated `tests/test_asset.py` covering zero-cost/zero-value guards and the
+  current-price fallback used by market-value calculations.
 - Conventional `requirements.txt` / `requirements-dev.txt` entry points for tools
   that discover dependencies by filename; the pinned `.lock.txt` stays authoritative.
 - `build` added to pinned dev dependencies so `make build` works from a fresh clone.
@@ -38,8 +40,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the documented single validation contract real instead of dead code, and removes
   the duplicated ad-hoc symbol check.
 
+### Fixed
+
+- `is_valid_symbol` now uses a full-string match instead of a `$`-anchored pattern;
+  a trailing newline (e.g. `"AAPL\n"`) previously passed validation and could
+  forge an extra row in an exported CSV.
+- `parse_decimal` now rejects values that overflow to `inf` on float conversion,
+  preserving its finite-float contract for CLI and CSV input.
+- Unexpected CLI exceptions are now emitted as one structured JSON error record
+  and exit with status 1 instead of surfacing a bare Python traceback.
+- CI lint, typecheck and test jobs now install from `requirements-dev.lock.txt`,
+  matching the documented reproducible-install path and the dedicated lockfile job.
+
 ### Security
 
+- Free-text validation also rejects DEL (0x7F) and Unicode line/paragraph
+  separators (U+2028/U+2029), and the CLI `--class` argument now uses the same
+  formula/control-character rules as CSV input.
+- `.env` and `.env.*` are gitignored and excluded from the Docker build context;
+  only `.env.example` remains tracked.
 - `CsvRowSchema` now rejects NaN and infinities explicitly. Previously `nan < 0` is
   false, so non-finite values could pass the schema's bounds checks.
 - Free-text CSV fields (`asset_class`) are now checked for spreadsheet formula

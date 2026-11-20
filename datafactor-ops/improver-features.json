@@ -34,6 +34,41 @@
       "id": "statically-validate-docker-and-compose-fragments",
       "status": "verified",
       "test": "manual: Dockerfile/compose/CI reviewed statically; no Docker engine available"
+    },
+    {
+      "id": "fix-symbol-newline-and-numeric-overflow-validation",
+      "status": "verified",
+      "test": "pytest tests/test_validation.py -q"
+    },
+    {
+      "id": "validate-cli-asset-class-at-argparse-boundary",
+      "status": "verified",
+      "test": "pytest tests/test_cli.py -q"
+    },
+    {
+      "id": "structured-top-level-cli-error-handling",
+      "status": "verified",
+      "test": "pytest tests/test_cli.py -q"
+    },
+    {
+      "id": "ignore-env-files-from-git-and-docker-context",
+      "status": "verified",
+      "test": "manual: git check-ignore .env and static .dockerignore review"
+    },
+    {
+      "id": "ci-install-from-lockfile-in-all-jobs",
+      "status": "verified",
+      "test": "manual: static CI YAML review of every install step"
+    },
+    {
+      "id": "document-hardening-in-changelog-readme-security",
+      "status": "verified",
+      "test": "manual: README/SECURITY/CHANGELOG review"
+    },
+    {
+      "id": "add-direct-asset-edge-case-tests",
+      "status": "verified",
+      "test": "pytest tests/test_asset.py -q"
     }
   ]
 }
